@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,10 +26,6 @@ func handleStream(c *gin.Context) {
 
 func writeStreamURL(c *gin.Context, id int) error {
 	w := c.Writer
-	// ch, ok := channels[id]
-	// if !ok {
-	// 	return "", fmt.Errorf("Can not found channel %d", id)
-	// }
 
 	st, err := getStreamType(id)
 	if err != nil {
@@ -127,7 +124,7 @@ func getStreamType(id int) (streamType, error) {
 
 type tokenInfo struct {
 	Token  string `json:"token"`
-	Expire string `json:"expire_in"`
+	Expire time.Time
 }
 
 var hlsTokenCache = map[int]*tokenInfo{}
@@ -143,7 +140,7 @@ func getHlsURL(id int) (string, error) {
 
 func getHlsToken(id int) (*tokenInfo, error) {
 	token, ok := hlsTokenCache[id]
-	if ok {
+	if ok && token.Expire.After(time.Now()) {
 		return token, nil
 	}
 	tokenURL := fmt.Sprintf("https://www.vidio.com/live/%d/tokens", id)
@@ -159,6 +156,7 @@ func getHlsToken(id int) (*tokenInfo, error) {
 	var tokenObj tokenInfo
 
 	json.NewDecoder(tokenRes.Body).Decode(&tokenObj)
+	tokenObj.Expire = time.Now().Add(5 * time.Minute)
 	hlsTokenCache[id] = &tokenObj
 	return &tokenObj, nil
 }
