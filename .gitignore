@@ -1,3 +1,6 @@
+# build dir
+dist
+
 # vscode
 __debug_bin
 
